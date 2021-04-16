@@ -1,0 +1,15 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Stack for Firehose DeliveryStream S3 Destination.",
+
+  "Resources": {
+    "MyKinesisStream": {
+    "Type": "AWS::Kinesis::Stream",
+    "Properties": {
+        "Name": "MyKinesisStream",
+        "RetentionPeriodHours" : 168,
+        "ShardCount": 3
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template for Triggers-Demo Application",
+  "Outputs": {},
+  "Resources": {
+    "MyKinesisStream": {
+      "Type": "AWS::Kinesis::Stream",
+      "Properties": {
+        "Name": "MyKinesisStream",
+        "RetentionPeriodHours": 168,
+        "ShardCount": 3
+      }
+    },
+    "TriggersDemoFunction": {
+      "Properties": {
+        "Code": {
+          "S3Bucket": "aws-cloudformation-poc-bucket-us-east-2",
+          "S3Key": "lambdatrigger.zip"
+        },
+        "Description": "Lambda trigger Demo Function",
+        "FunctionName": "LambdaTriggerDemo",
+        "Handler": "lambdatrigger.lambda_handler",
+        "Role": "arn:aws:iam::766906035862:role/lambda-dev-us-east-2-lambdaRole",
+        "Runtime": "python3.7"
+      },
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "LogStream"
+      ]
+    },
+    "EventSourceMapping": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {
+        "BatchSize": 40,
+        "ParallelizationFactor":10,
+        "EventSourceArn": { "Fn::GetAtt" : [ "MyKinesisStream", "Arn" ]},
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "TriggersDemoFunction",
+            "Arn"
+          ]
+        },
+        "StartingPosition": "LATEST"
+      }
+    },
+    "LogStream": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/LambdaTriggerDemo"
+      }
+    }
+  }
+}

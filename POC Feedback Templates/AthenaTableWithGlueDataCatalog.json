@@ -1,0 +1,196 @@
+{
+    "Parameters": {
+        "S3BucketARN": {
+            "Type": "String"
+        },
+        "S3BucketPath": {
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AWSRecordingSearchRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "glue.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "AthenaAccess",
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "athena:*",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "GlueS3Access",
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "glue:*",
+                                        "iam:ListRolePolicies",
+                                        "iam:GetRole",
+                                        "iam:GetRolePolicy"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:GetBucketLocation",
+                                        "s3:ListBucket",
+                                        "s3:ListAllMyBuckets",
+                                        "s3:GetBucketAcl",
+                                        "s3:GetObject"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": [
+                                            "${s3bucketARN}*",
+                                            {
+                                                "s3bucketARN": {
+                                                    "Ref": "S3BucketARN"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:GetObject"
+                                    ],
+                                    "Resource": [
+                                        "arn:aws:s3:::crawler-public*",
+                                        "arn:aws:s3:::aws-glue-*"
+                                    ]
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "arn:aws:logs:*:*:/aws-glue/*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "QueryDatabase": {
+            "Type": "AWS::Glue::Database",
+            "Properties": {
+                "DatabaseInput": {
+                    "Description": "recordingSearchDatabase",
+                    "Name": "recordingsearch"
+                },
+                "CatalogId": {
+                    "Ref": "AWS::AccountId"
+                }
+            }
+        },
+        "MetadataCrawler": {
+            "DependsOn": [
+                "QueryDatabase",
+                "AWSRecordingSearchRole"
+            ],
+            "Type": "AWS::Glue::Crawler",
+            "Properties": {
+                "Role": {
+                    "Fn::GetAtt": [
+                        "AWSRecordingSearchRole",
+                        "Arn"
+                    ]
+                },
+                "Description": "RecordingSearchCrawler",
+                "Schedule": {
+                    "ScheduleExpression": "cron(0 0/6 ? * MON-FRI *)"
+                },
+                "DatabaseName": {
+                    "Ref": "QueryDatabase"
+                },
+                "Targets": {
+                    "S3Targets": [
+                        {
+                            "Path": {
+                                "Ref": "S3BucketPath"
+                            },
+                            "Exclusions": [
+                                "**.wav",
+                                "**.webm",
+                                "**.zip",
+                                "**.opus",
+                                "**.txt"
+                            ]
+                        }
+                    ]
+                },
+                "TablePrefix": "recordingSearch",
+                "Name": "recordingsearchcrawler"
+            }
+        },
+        "SampleQueryByRecordingStartTime": {
+            "DependsOn": "MetadataCrawler",
+            "Type": "AWS::Athena::NamedQuery",
+            "Properties": {
+                "Description": "Query that lists recording file paths, starting from the most recent recording.",
+                "QueryString": "SELECT filepath from recordingsearch<replace_with_path> ORDER BY startTime desc;",
+                "Database": {
+                    "Ref": "QueryDatabase"
+                },
+                "Name": "Sample Query By Recording Start Time"
+            }
+        },
+        "SampleQueryByDnis": {
+            "DependsOn": "MetadataCrawler",
+            "Type": "AWS::Athena::NamedQuery",
+            "Properties": {
+                "Description": "Query that lists recording file paths using dnis to filter.",
+                "QueryString": "SELECT filepath from recordingsearch<replace_with_path> WHERE dnisNormalized='<replace_with_dnis>';",
+                "Database": {
+                    "Ref": "QueryDatabase"
+                },
+                "Name": "Sample Query By dnis"
+            }
+        },
+        "MyAthenaWorkGroup": {
+          "Type": "AWS::Athena::WorkGroup",
+          "Properties": {
+            "Name": "MyCustomWorkGroup",
+            "Description": "My WorkGroup",
+            "State": "ENABLED",
+            "WorkGroupConfiguration": {
+              "BytesScannedCutoffPerQuery": 200000000,
+              "EnforceWorkGroupConfiguration": false,
+              "PublishCloudWatchMetricsEnabled": false,
+              "RequesterPaysEnabled": true,
+              "ResultConfiguration": {
+                "OutputLocation": "s3://aws-cloudformation-poc-us-east-2-athena-results/"
+              }
+            }
+          }
+        }
+    }
+}

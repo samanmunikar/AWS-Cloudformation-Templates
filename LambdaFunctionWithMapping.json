@@ -1,0 +1,59 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "A template is for creating lambda from s3 buckets",
+    "Parameters": {
+      "S3KeyName": {
+          "Description": "Enter the name of the object",
+          "Type": "String",
+          "Default": "lambda_function.zip"
+      },
+      "LambdaFunctionName": {
+          "Description": "Enter the name of Lambda Function",
+          "Type": "String",
+          "Default": "HelloWorldLamdbaFunction"
+      },
+      "ModuleName" : {
+        "Description" : "The name of the JavaScript file",
+        "Type" : "String",
+        "Default" : "lambda_function"
+      },
+      "LambdaHandler": {
+          "Description": "Enter the name of Lambda Handler",
+          "Type": "String",
+          "Default": "lambda_handler"
+      }
+    },
+    "Mappings": {
+      "RegionMap": {
+        "us-east-1": {
+          "S3BucketName": "aws-cloudformation-poc-bucket-us-east-1"
+        },
+        "us-east-2": {
+          "S3BucketName": "aws-cloudformation-poc-bucket-us-east-2"
+        }
+      }
+    },
+    "Resources": {
+        "LambdaFunResource": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": { "Ref": "LambdaFunctionName" },
+                "Code": {
+				"S3Bucket" :   {"Fn::FindInMap": [
+              "RegionMap",
+              {
+                "Ref": "AWS::Region"
+              },
+              "S3BucketName"
+          ]},
+					"S3Key" : { "Ref": "S3KeyName" }
+				},
+                "Description": "Created from CloudFormation Run Hello World",
+                "Handler": { "Fn::Join" : [ "", [{ "Ref": "ModuleName" },".",{ "Ref": "LambdaHandler" }] ] },
+                "Role": "arn:aws:iam::766906035862:role/lambda-dev-us-east-2-lambdaRole",
+                "Runtime": "python3.6",
+                "Timeout": 120
+            }
+        }
+  }
+}

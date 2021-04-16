@@ -1,0 +1,31 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+    },
+    "Conditions": {},
+    "Mappings": {},
+    "Resources": {
+        "LCStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://2020-cft-training-bucket.s3.us-east-2.amazonaws.com/Exercise-6-Stack-LC.json",
+                "Parameters": {}
+            }
+        },
+        "ASGStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://2020-cft-training-bucket.s3.us-east-2.amazonaws.com/Exercise-7-Stack-ASG.json",
+                "Parameters": {
+                    "LcArn": {
+                        "Fn::GetAtt": [
+                            "LCStack",
+                            "Outputs.LaunchConfig"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "Outputs": {}
+}

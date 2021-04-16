@@ -1,0 +1,58 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Stack for Firehose DeliveryStream S3 Destination.",
+  "Resources": {
+    "MyKinesisStream": {
+      "Type": "AWS::Kinesis::Stream",
+      "Properties": {
+        "Name": "MyKinesisStream",
+        "RetentionPeriodHours": 168,
+        "ShardCount": 3
+      }
+    },
+    "Firehosedeliverystream": {
+      "Type": "AWS::KinesisFirehose::DeliveryStream",
+      "Properties": {
+        "DeliveryStreamName": "FireHoseDeliveryStreamToS3",
+        "ExtendedS3DestinationConfiguration": {
+          "BucketARN": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:aws:s3:::",
+                {
+                  "Ref": "s3bucket"
+                }
+              ]
+            ]
+          },
+          "BufferingHints": {
+            "IntervalInSeconds": "60",
+            "SizeInMBs": "50"
+          },
+          "CompressionFormat": "UNCOMPRESSED",
+          "Prefix": "firehose/",
+          "RoleARN": "arn:aws:iam::766906035862:role/KinesisAndS3FullAccess"
+        },
+        "DeliveryStreamType": "KinesisStreamAsSource",
+        "KinesisStreamSourceConfiguration": {
+          "KinesisStreamARN": {
+            "Fn::GetAtt": [
+              "MyKinesisStream",
+              "Arn"
+            ]
+          },
+          "RoleARN": "arn:aws:iam::766906035862:role/KinesisAndS3FullAccess"
+        }
+      }
+    },
+    "s3bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        }
+      }
+    }
+  }
+}

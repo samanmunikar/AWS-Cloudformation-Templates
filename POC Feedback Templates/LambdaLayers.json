@@ -1,0 +1,71 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template for Layers-Demo Application",
+  "Outputs": {
+    "MyLambdaLayerARN": {
+      "Description": "MyLambdaLayer ARN",
+      "Export": {
+        "Name": "my-lambda-layer-arn"
+      },
+      "Value": {
+        "Ref": "MyLambdaLayer"
+      }
+    }
+  },
+  "Resources": {
+    "FactorialDemoFunction": {
+      "Properties": {
+        "Code": {
+          "S3Bucket": "aws-cloudformation-poc-bucket-us-east-2",
+          "S3Key": "factorial_demo.zip"
+        },
+        "Description": "Layers App Factorial Demo Function",
+        "FunctionName": "LayersApp-FactorialDemo",
+        "Handler": "factorial_demo.lambda_handler",
+        "Layers": [
+          {
+            "Ref": "MyLambdaLayer"
+          }
+        ],
+        "Role": "arn:aws:iam::766906035862:role/lambda-dev-us-east-2-lambdaRole",
+        "Runtime": "python3.7"
+      },
+      "Type": "AWS::Lambda::Function"
+    },
+    "MyLambdaLayer": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {
+        "CompatibleRuntimes": [
+          "python3.6",
+          "python3.7"
+        ],
+        "Content": {
+          "S3Bucket": "aws-cloudformation-poc-bucket-us-east-2",
+          "S3Key": "lambda-layers.zip"
+        },
+        "Description": "My Lambda Layer with Factorial Function, Get AWS Regions JSON",
+        "LayerName": "MyLambdaLayer",
+        "LicenseInfo": "MIT"
+      }
+    },
+    "GetAWSRegionDemoFunction": {
+      "Properties": {
+        "Code": {
+          "S3Bucket": "aws-cloudformation-poc-bucket-us-east-2",
+          "S3Key": "getAWSregion.zip"
+        },
+        "Description": "Layers App Get AWS Region Demo Function",
+        "FunctionName": "LayersApp-GetAWSRegionDataDemo",
+        "Handler": "getAWSregion.lambda_handler",
+        "Layers": [
+          {
+            "Ref": "MyLambdaLayer"
+          }
+        ],
+        "Role": "arn:aws:iam::766906035862:role/lambda-dev-us-east-2-lambdaRole",
+        "Runtime": "python3.7"
+      },
+      "Type": "AWS::Lambda::Function"
+    }
+  }
+}
